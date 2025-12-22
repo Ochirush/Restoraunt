@@ -6,6 +6,9 @@ class Dashboard {
     async loadDashboardData() {
         try {
             utils.showLoading();
+            const role = auth?.currentUser?.role;
+            const canViewInventory = ['manager', 'chef', 'head_chef', 'admin'].includes(role);
+            const canViewReports = ['manager', 'analyst', 'admin'].includes(role);
             
             // Загрузка статистики
             const stats = await api.getDailyStats();
@@ -16,12 +19,26 @@ class Dashboard {
             this.updateRecentOrders(orders);
             
             // Загрузка ингредиентов с низким запасом
-            const lowStock = await api.getLowStockIngredients();
-            this.updateLowStock(lowStock);
+            if (canViewInventory) {
+                const lowStock = await api.getLowStockIngredients();
+                this.updateLowStock(lowStock);
+            } else {
+                const container = document.getElementById('lowStockItems');
+                if (container) {
+                    container.innerHTML = '<p>Недоступно для вашей роли</p>';
+                }
+            }
             
             // Загрузка популярных блюд
-            const popularDishes = await api.getPopularDishes({ limit: 5 });
-            this.updatePopularDishes(popularDishes);
+            if (canViewReports) {
+                const popularDishes = await api.getPopularDishes({ limit: 5 });
+                this.updatePopularDishes(popularDishes);
+            } else {
+                const container = document.getElementById('popularDishes');
+                if (container) {
+                    container.innerHTML = '<p>Недоступно для вашей роли</p>';
+                }
+            }
             
         } catch (error) {
             console.error('Ошибка загрузки дашборда:', error);
