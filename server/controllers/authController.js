@@ -2,95 +2,130 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const pool = require('../config/database');
 
+const DEFAULT_JWT_SECRET = process.env.JWT_SECRET || 'development-secret';
+let authTableReady = false;
+
+async function ensureAuthTables() {
+    if (authTableReady) return;
+
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS user_accounts (
+            account_id SERIAL PRIMARY KEY,
+            employee_id INTEGER REFERENCES employees(employee_id) ON DELETE CASCADE,
+            email VARCHAR(255) UNIQUE NOT NULL,
+            password_hash VARCHAR(255) NOT NULL,
+            role VARCHAR(50) NOT NULL DEFAULT 'employee',
+            created_at TIMESTAMP DEFAULT NOW()
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_user_accounts_email ON user_accounts(email);
+    `);
+
+    authTableReady = true;
+}
+
 const authController = {
     async register(req, res) {
         try {
             const { email, password, full_name, role } = req.body;
-            
-            // Проверка существующего пользователя
-            const userCheck = await pool.query(
-                'SELECT * FROM employees WHERE mail = $1',
+
+            if (!email || !password || !full_name || !role) {
+                return res.status(400).json({ error: 'Заполните все поля' });
+            }
+
+            await ensureAuthTables();
+
+            const existingAccount = await pool.query(
+                'SELECT 1 FROM user_accounts WHERE email = $1',
                 [email]
             );
-            
-            if (userCheck.rows.length > 0) {
+
+            if (existingAccount.rows.length > 0) {
                 return res.status(400).json({ error: 'Пользователь уже существует' });
             }
-            
-            // Хеширование пароля
+
             const hashedPassword = await bcrypt.hash(password, 10);
-            
-            // Создание пользователя
+
             const newUser = await pool.query(
-                `INSERT INTO employees (full_name, mail, experience, age, information) 
-                 VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+                `INSERT INTO employees (full_name, mail, experience, age, information)
+                 VALUES ($1, $2, $3, $4, $5) RETURNING employee_id, full_name, mail`,
                 [full_name, email, 'Новичок', 25, `Роль: ${role}`]
             );
-            
-            // В реальном приложении сохранить хешированный пароль в отдельной таблице
-            // Для демо просто возвращаем успех
-            
-            res.status(201).json({ 
+
+            const employee = newUser.rows[0];
+
+            await pool.query(
+                `INSERT INTO user_accounts (employee_id, email, password_hash, role)
+                 VALUES ($1, $2, $3, $4)`,
+                [employee.employee_id, email, hashedPassword, role]
+            );
+
+            res.status(201).json({
                 message: 'Пользователь успешно зарегистрирован',
-                user: newUser.rows[0]
+                user: {
+                    id: employee.employee_id,
+                    email: employee.mail,
+                    name: employee.full_name,
+                    role
+                }
             });
         } catch (error) {
             console.error('Ошибка регистрации:', error);
             res.status(500).json({ error: 'Ошибка регистрации' });
         }
     },
-    
+
     async login(req, res) {
         try {
             const { email, password } = req.body;
-            
-            // Поиск пользователя
-            const userResult = await pool.query(
-                'SELECT * FROM employees WHERE mail = $1',
+
+            await ensureAuthTables();
+
+            const accountResult = await pool.query(
+                `SELECT ua.account_id, ua.employee_id, ua.password_hash, ua.role as account_role,
+                        e.full_name, e.mail
+                 FROM user_accounts ua
+                 JOIN employees e ON ua.employee_id = e.employee_id
+                 WHERE ua.email = $1`,
                 [email]
             );
-            
-            if (userResult.rows.length === 0) {
+
+            if (accountResult.rows.length === 0) {
                 return res.status(401).json({ error: 'Пользователь не найден' });
             }
-            
-            const user = userResult.rows[0];
-            
-            // В реальном приложении проверять пароль из таблицы аутентификации
-            // Для демо используем простую проверку
-            const isValidPassword = await bcrypt.compare(password, '$2b$10$DEMOPASSWORDHASH');
-            
+
+            const account = accountResult.rows[0];
+
+            const isValidPassword = await bcrypt.compare(password, account.password_hash);
+
             if (!isValidPassword) {
                 return res.status(401).json({ error: 'Неверный пароль' });
             }
-            
-            // Определение роли пользователя
+
             const roleResult = await pool.query(
-                `SELECT position FROM est_empl WHERE employee_id = $1`,
-                [user.employee_id]
+                `SELECT position FROM est_empl WHERE employee_id = $1 ORDER BY est_empl_id DESC LIMIT 1`,
+                [account.employee_id]
             );
-            
-            const role = roleResult.rows.length > 0 ? roleResult.rows[0].position : 'employee';
-            
-            // Создание JWT токена
+
+            const role = roleResult.rows[0]?.position || account.account_role;
+
             const token = jwt.sign(
-                { 
-                    userId: user.employee_id,
-                    email: user.mail,
-                    name: user.full_name,
+                {
+                    userId: account.employee_id,
+                    email: account.mail,
+                    name: account.full_name,
                     role: role
                 },
-                process.env.JWT_SECRET,
+                DEFAULT_JWT_SECRET,
                 { expiresIn: '24h' }
             );
-            
+
             res.json({
                 message: 'Успешный вход',
                 token,
                 user: {
-                    id: user.employee_id,
-                    email: user.mail,
-                    name: user.full_name,
+                    id: account.employee_id,
+                    email: account.mail,
+                    name: account.full_name,
                     role: role
                 }
             });
@@ -99,23 +134,23 @@ const authController = {
             res.status(500).json({ error: 'Ошибка входа' });
         }
     },
-    
+
     async getProfile(req, res) {
         try {
             const userId = req.user.userId;
-            
+
             const userResult = await pool.query(
                 'SELECT * FROM employees WHERE employee_id = $1',
                 [userId]
             );
-            
+
             if (userResult.rows.length === 0) {
                 return res.status(404).json({ error: 'Пользователь не найден' });
             }
-            
+
             const user = userResult.rows[0];
-            
-            res.json({ 
+
+            res.json({
                 user: {
                     id: user.employee_id,
                     email: user.mail,
@@ -128,7 +163,7 @@ const authController = {
             res.status(500).json({ error: 'Ошибка получения профиля' });
         }
     },
-    
+
     async logout(req, res) {
         res.json({ message: 'Успешный выход' });
     }
