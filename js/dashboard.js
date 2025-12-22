@@ -8,7 +8,6 @@ class Dashboard {
             utils.showLoading();
             const role = auth?.currentUser?.role;
             const canViewInventory = ['manager', 'chef', 'head_chef', 'admin'].includes(role);
-            const canViewReports = ['manager', 'analyst', 'admin'].includes(role);
             
             // Загрузка статистики
             const stats = await api.getDailyStats();
@@ -24,17 +23,6 @@ class Dashboard {
                 this.updateLowStock(lowStock);
             } else {
                 const container = document.getElementById('lowStockItems');
-                if (container) {
-                    container.innerHTML = '<p>Недоступно для вашей роли</p>';
-                }
-            }
-            
-            // Загрузка популярных блюд
-            if (canViewReports) {
-                const popularDishes = await api.getPopularDishes({ limit: 5 });
-                this.updatePopularDishes(popularDishes);
-            } else {
-                const container = document.getElementById('popularDishes');
                 if (container) {
                     container.innerHTML = '<p>Недоступно для вашей роли</p>';
                 }
@@ -101,27 +89,6 @@ class Dashboard {
             `;
         });
         html += '</ul>';
-        container.innerHTML = html;
-    }
-
-    updatePopularDishes(dishes) {
-        const container = document.getElementById('popularDishes');
-        if (!container) return;
-
-        if (!dishes || dishes.length === 0) {
-            container.innerHTML = '<p>Нет данных о популярных блюдах</p>';
-            return;
-        }
-
-        let html = '<ol>';
-        dishes.forEach(dish => {
-            html += `
-                <li onclick="menu.viewDish(${dish.dish_id})" style="cursor: pointer; padding: 5px 0;">
-                    <strong>${dish.dish_name}</strong> - ${dish.times_ordered} заказов
-                </li>
-            `;
-        });
-        html += '</ol>';
         container.innerHTML = html;
     }
 
