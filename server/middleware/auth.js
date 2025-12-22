@@ -21,7 +21,8 @@ const authMiddleware = {
     
     checkRole: (...roles) => {
         return (req, res, next) => {
-            if (!req.user || !roles.includes(req.user.role)) {
+            const normalized = normalizeRole(req.user?.role);
+            if (!req.user || !roles.includes(normalized)) {
                 return res.status(403).json({ 
                     error: 'Недостаточно прав' 
                 });

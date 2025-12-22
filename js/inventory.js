@@ -48,7 +48,7 @@ class Inventory {
                     <td>${ingredient.supplier_name}</td>
                     <td>
                         <button class="btn-small" onclick="inventory.editIngredient(${ingredient.ingredient_id})">Изменить</button>
-                        ${auth.currentUser.role === 'manager' ? 
+                        ${['manager', 'admin'].includes(auth.currentUser.role) ? 
                             `<button class="btn-small btn-danger" onclick="inventory.deleteIngredient(${ingredient.ingredient_id})">Удалить</button>` : ''}
                     </td>
                 </tr>
