@@ -5,19 +5,6 @@ const pool = require('../config/database');
 const DEFAULT_JWT_SECRET = process.env.JWT_SECRET || 'development-secret';
 let authTableReady = false;
 
-function normalizeRole(rawRole) {
-    const value = (rawRole || '').toLowerCase();
-
-    if (value.includes('админ') || value.includes('admin')) return 'admin';
-    if (value.includes('менедж')) return 'manager';
-    if (value.includes('аналит')) return 'analyst';
-    if (value.includes('шеф')) return 'head_chef';
-    if (value.includes('бариста') || value.includes('официант')) return 'waiter';
-    if (value.includes('повар')) return 'chef';
-
-    return rawRole || 'employee';
-}
-
 async function ensureAuthTables() {
     if (authTableReady) return;
 
@@ -57,7 +44,6 @@ const authController = {
             }
 
             const hashedPassword = await bcrypt.hash(password, 10);
-            const normalizedRole = normalizeRole(role);
 
             const newUser = await pool.query(
                 `INSERT INTO employees (full_name, mail, experience, age, information)
@@ -70,7 +56,7 @@ const authController = {
             await pool.query(
                 `INSERT INTO user_accounts (employee_id, email, password_hash, role)
                  VALUES ($1, $2, $3, $4)`,
-                [employee.employee_id, email, hashedPassword, normalizedRole]
+                [employee.employee_id, email, hashedPassword, role]
             );
 
             res.status(201).json({
@@ -79,8 +65,7 @@ const authController = {
                     id: employee.employee_id,
                     email: employee.mail,
                     name: employee.full_name,
-                    role: normalizedRole,
-                    role_display: role
+                    role
                 }
             });
         } catch (error) {
@@ -121,16 +106,14 @@ const authController = {
                 [account.employee_id]
             );
 
-            const rawRole = roleResult.rows[0]?.position || account.account_role;
-            const normalizedRole = normalizeRole(rawRole);
+            const role = roleResult.rows[0]?.position || account.account_role;
 
             const token = jwt.sign(
                 {
                     userId: account.employee_id,
                     email: account.mail,
                     name: account.full_name,
-                    role: normalizedRole,
-                    role_display: rawRole
+                    role: role
                 },
                 DEFAULT_JWT_SECRET,
                 { expiresIn: '24h' }
@@ -143,8 +126,7 @@ const authController = {
                     id: account.employee_id,
                     email: account.mail,
                     name: account.full_name,
-                    role: normalizedRole,
-                    role_display: rawRole
+                    role: role
                 }
             });
         } catch (error) {
