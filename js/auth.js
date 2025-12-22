@@ -80,7 +80,7 @@ class Auth {
     updateUserInfo() {
         if (this.currentUser) {
             document.getElementById('userName').textContent = this.currentUser.name;
-            document.getElementById('userRole').textContent = this.currentUser.role;
+            document.getElementById('userRole').textContent = this.currentUser.role_display || this.currentUser.role;
             document.getElementById('welcomeName').textContent = this.currentUser.name;
         }
     }
@@ -90,9 +90,9 @@ class Auth {
         const reportsLink = document.getElementById('reportsLink');
         const menuLink = document.getElementById('menuLink');
         
-        const allowedRolesForInventory = ['manager', 'chef', 'head_chef'];
-        const allowedRolesForReports = ['manager', 'analyst'];
-        const allowedRolesForMenu = ['manager', 'chef', 'head_chef'];
+        const allowedRolesForInventory = ['manager', 'chef', 'head_chef', 'admin'];
+        const allowedRolesForReports = ['manager', 'analyst', 'admin'];
+        const allowedRolesForMenu = ['manager', 'chef', 'head_chef', 'admin'];
         
         inventoryLink.style.display = allowedRolesForInventory.includes(this.currentUser?.role) ? 'flex' : 'none';
         reportsLink.style.display = allowedRolesForReports.includes(this.currentUser?.role) ? 'flex' : 'none';

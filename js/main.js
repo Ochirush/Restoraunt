@@ -79,9 +79,9 @@ function showRegister() {
 function updateUserInfo() {
     if (currentUser) {
         document.getElementById('userName').textContent = currentUser.name;
-        document.getElementById('userRole').textContent = currentUser.role;
+        document.getElementById('userRole').textContent = currentUser.role_display || currentUser.role;
         document.getElementById('welcomeName').textContent = currentUser.name;
-        document.getElementById('userRoleInfo').textContent = currentUser.role;
+        document.getElementById('userRoleInfo').textContent = currentUser.role_display || currentUser.role;
     }
 }
 
@@ -90,9 +90,9 @@ function updateNavigation() {
     const reportsLink = document.getElementById('reportsLink');
     const menuLink = document.getElementById('menuLink');
     
-    const allowedRolesForInventory = ['manager', 'chef', 'head_chef'];
-    const allowedRolesForReports = ['manager', 'analyst'];
-    const allowedRolesForMenu = ['manager', 'chef', 'head_chef'];
+    const allowedRolesForInventory = ['manager', 'chef', 'head_chef', 'admin'];
+    const allowedRolesForReports = ['manager', 'analyst', 'admin'];
+    const allowedRolesForMenu = ['manager', 'chef', 'head_chef', 'admin'];
     
     inventoryLink.style.display = allowedRolesForInventory.includes(currentUser?.role) ? 'flex' : 'none';
     reportsLink.style.display = allowedRolesForReports.includes(currentUser?.role) ? 'flex' : 'none';
@@ -102,6 +102,10 @@ function updateNavigation() {
 // ========== DASHBOARD FUNCTIONS ==========
 
 async function loadDashboard() {
+    const role = currentUser?.role;
+    const canViewInventory = ['manager', 'chef', 'head_chef', 'admin'].includes(role);
+    const canViewReports = ['manager', 'analyst', 'admin'].includes(role);
+
     try {
         utils.showLoading();
         
@@ -114,12 +118,26 @@ async function loadDashboard() {
         updateRecentOrders(orders);
         
         // Загрузка ингредиентов с низким запасом
-        const lowStock = await api.getLowStockIngredients();
-        updateLowStock(lowStock);
+        if (canViewInventory) {
+            const lowStock = await api.getLowStockIngredients();
+            updateLowStock(lowStock);
+        } else {
+            const container = document.getElementById('lowStockItems');
+            if (container) {
+                container.innerHTML = '<p>Недоступно для вашей роли</p>';
+            }
+        }
         
         // Загрузка популярных блюд
-        const popularDishes = await api.getPopularDishes({ limit: 5 });
-        updatePopularDishes(popularDishes);
+        if (canViewReports) {
+            const popularDishes = await api.getPopularDishes({ limit: 5 });
+            updatePopularDishes(popularDishes);
+        } else {
+            const container = document.getElementById('popularDishes');
+            if (container) {
+                container.innerHTML = '<p>Недоступно для вашей роли</p>';
+            }
+        }
         
     } catch (error) {
         console.error('Ошибка загрузки дашборда:', error);
