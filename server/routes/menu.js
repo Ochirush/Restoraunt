@@ -1,84 +1,50 @@
 const express = require('express');
 const router = express.Router();
 
-// Демо данные меню
-const demoDishes = [
-    {
-        dish_id: 1,
-        dish_name: 'Стейк Рибай',
-        category: 'Вторые блюда',
-        price: 1200,
-        cooking_time: '00:30:00',
-        availability: true
-    },
-    {
-        dish_id: 2,
-        dish_name: 'Салат Цезарь',
-        category: 'Закуски',
-        price: 450,
-        cooking_time: '00:10:00',
-        availability: true
-    },
-    {
-        dish_id: 3,
-        dish_name: 'Тирамису',
-        category: 'Десерты',
-        price: 350,
-        cooking_time: '00:15:00',
-        availability: true
-    },
-    {
-        dish_id: 4,
-        dish_name: 'Кола',
-        category: 'Напитки',
-        price: 150,
-        cooking_time: '00:01:00',
-        availability: true
-    },
-    {
-        dish_id: 5,
-        dish_name: 'Шашлык из свинины',
-        category: 'На мангале',
-        price: 800,
-        cooking_time: '00:25:00',
-        availability: false
-    }
-];
+const menuController = require('../controllers/menucontroller');
+// если хочешь проверку токена – раскомментируй:
+// const { authenticate } = require('../middleware/auth');
 
-router.get('/', (req, res) => {
-    const { category, min_price, max_price, available } = req.query;
-    let filteredDishes = demoDishes;
-    
-    if (category) {
-        filteredDishes = filteredDishes.filter(dish => dish.category === category);
-    }
-    
-    if (min_price) {
-        filteredDishes = filteredDishes.filter(dish => dish.price >= parseInt(min_price));
-    }
-    
-    if (max_price) {
-        filteredDishes = filteredDishes.filter(dish => dish.price <= parseInt(max_price));
-    }
-    
-    if (available === 'true') {
-        filteredDishes = filteredDishes.filter(dish => dish.availability === true);
-    }
-    
-    res.json(filteredDishes);
-});
+// Список блюд с фильтрами (?category=...&min_price=...&max_price=...&available=true)
+router.get(
+    '/',
+    // authenticate,
+    menuController.getAllDishes
+);
 
-router.get('/categories', (req, res) => {
-    const categories = [
-        'Закуски',
-        'Супы',
-        'Вторые блюда',
-        'На мангале',
-        'Десерты',
-        'Напитки'
-    ];
-    
-    res.json(categories);
-});
+// Категории блюд (из enum dish_type)
+router.get(
+    '/categories',
+    // authenticate,
+    menuController.getCategories
+);
+
+// Конкретное блюдо по id
+router.get(
+    '/:id',
+    // authenticate,
+    menuController.getDishById
+);
+
+// Создание блюда
+router.post(
+    '/',
+    // authenticate,
+    menuController.createDish
+);
+
+// Обновление блюда
+router.put(
+    '/:id',
+    // authenticate,
+    menuController.updateDish
+);
+
+// Удаление блюда
+router.delete(
+    '/:id',
+    // authenticate,
+    menuController.deleteDish
+);
 
 module.exports = router;

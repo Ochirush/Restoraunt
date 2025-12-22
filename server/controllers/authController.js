@@ -144,7 +144,7 @@ const authController = {
             }
 
             const roleResult = await pool.query(
-                `SELECT position FROM est_empl WHERE employee_id = $1 ORDER BY est_empl_id DESC LIMIT 1`,
+                `SELECT position FROM est_empl WHERE employee_id = $1 ORDER BY establishment_id DESC LIMIT 1`,
                 [account.employee_id]
             );
 

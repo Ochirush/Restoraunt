@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-
+const { normalizeRole } = require('../utils/roles');
 const JWT_SECRET = process.env.JWT_SECRET || 'development-secret';
 
 const authMiddleware = {
@@ -19,17 +19,14 @@ const authMiddleware = {
         }
     },
     
-    checkRole: (...roles) => {
-        return (req, res, next) => {
-            const normalized = normalizeRole(req.user?.role);
-            if (!req.user || !roles.includes(normalized)) {
-                return res.status(403).json({ 
-                    error: 'Недостаточно прав' 
-                });
-            }
-            next();
-        };
+    checkRole: (...allowedRoles) => (req, res, next) => {
+        console.log('checkRole: user =', req.user); // тут увидишь role
+        if (!req.user || !allowedRoles.includes(req.user.role)) {
+            return res.status(403).json({ error: 'Недостаточно прав' });
+        }
+        next();
     }
+
 };
 
 module.exports = authMiddleware;

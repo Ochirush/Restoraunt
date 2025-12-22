@@ -1,3 +1,4 @@
+// server/controllers/inventoryController.js
 const pool = require('../config/database');
 
 const inventoryController = {

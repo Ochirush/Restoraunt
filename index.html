@@ -22,7 +22,7 @@
                 <i class="fas fa-receipt"></i> Заказы
             </a>
             <a href="#" onclick="showSection('inventory'); loadInventory();" id="inventoryLink">
-                <i class="fas fa-boxes"></i> Инвентарь
+                <i class="fas fa-boxes"></i> Склад
             </a>
             <a href="#" onclick="showSection('menu'); loadMenu();" id="menuLink">
                 <i class="fas fa-book"></i> Меню
@@ -47,19 +47,16 @@
         <div class="auth-form" id="loginForm">
             <h2>Вход в систему</h2>
             <div class="form-group">
-                <label for="loginEmail">Email:</label>
-                <input type="email" id="loginEmail" placeholder="admin@restaurant.com">
+                <label for="loginEmail">Логин:</label>
+                <input type="email" id="loginEmail" placeholder="Введите логин">
             </div>
             <div class="form-group">
                 <label for="loginPassword">Пароль:</label>
-                <input type="password" id="loginPassword" placeholder="admin123">
+                <input type="password" id="loginPassword" placeholder="Введите пароль">
             </div>
             <button onclick="handleLogin()">Войти</button>
             <p style="margin-top: 20px; font-size: 12px; color: #666; text-align: center;">
-                Демо аккаунты:<br>
-                admin@restaurant.com / admin123<br>
-                manager@restaurant.com / manager123<br>
-                chef@restaurant.com / chef123
+                
             </p>
             <p>Нет аккаунта? <a href="#" onclick="showRegister()">Зарегистрироваться</a></p>
         </div>
@@ -93,7 +90,7 @@
     </div>
 
     <div class="main-content" id="mainContent" style="display: none;">
-        <!-- Dashboard -->
+       
         <div id="dashboard" class="content-section">
             <h1>Добро пожаловать, <span id="welcomeName"></span>!</h1>
             <p>Ваша роль: <strong id="userRoleInfo"></strong></p>
@@ -148,7 +145,7 @@
             </div>
         </div>
 
-        <!-- Orders -->
+        
         <div id="orders" class="content-section" style="display: none;">
             <div class="section-header">
                 <h1><i class="fas fa-receipt"></i> Управление заказами</h1>
@@ -185,16 +182,16 @@
                         </tr>
                     </thead>
                     <tbody id="ordersTableBody">
-                        <!-- Данные загружаются через JS -->
+                        
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <!-- Inventory -->
+        
         <div id="inventory" class="content-section" style="display: none;">
             <div class="section-header">
-                <h1><i class="fas fa-boxes"></i> Управление инвентарем</h1>
+                <h1><i class="fas fa-boxes"></i> Управление складом</h1>
                 <div>
                     <button class="btn-primary" onclick="addIngredient()">
                         <i class="fas fa-plus"></i> Добавить ингредиент
