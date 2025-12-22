@@ -23,6 +23,58 @@ async function ensureAuthTables() {
     authTableReady = true;
 }
 
+async function provisionAccountIfMissing(email) {
+    // Возвращает существующую или созданную учетную запись для заданного email
+    const existing = await pool.query(
+        `SELECT ua.account_id, ua.employee_id, ua.password_hash, ua.role as account_role,
+                e.full_name, e.mail
+         FROM user_accounts ua
+         JOIN employees e ON ua.employee_id = e.employee_id
+         WHERE ua.email = $1`,
+        [email]
+    );
+
+    if (existing.rows.length > 0) {
+        return existing.rows[0];
+    }
+
+    const employeeResult = await pool.query(
+        'SELECT employee_id, full_name, mail FROM employees WHERE mail = $1',
+        [email]
+    );
+
+    if (employeeResult.rows.length === 0) {
+        return null;
+    }
+
+    const employee = employeeResult.rows[0];
+    const roleResult = await pool.query(
+        `SELECT position FROM est_empl WHERE employee_id = $1 ORDER BY establishment_id DESC LIMIT 1`,
+        [employee.employee_id]
+    );
+    const rawRole = roleResult.rows[0]?.position || 'employee';
+    const normalizedRole = normalizeRole(rawRole);
+
+    const defaultPassword = process.env.DEFAULT_USER_PASSWORD || 'password123';
+    const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+
+    await pool.query(
+        `INSERT INTO user_accounts (employee_id, email, password_hash, role)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (email) DO NOTHING`,
+        [employee.employee_id, email, hashedPassword, normalizedRole]
+    );
+
+    return {
+        account_id: null,
+        employee_id: employee.employee_id,
+        password_hash: hashedPassword,
+        account_role: normalizedRole,
+        full_name: employee.full_name,
+        mail: employee.mail
+    };
+}
+
 const authController = {
     async register(req, res) {
         try {
@@ -80,20 +132,10 @@ const authController = {
 
             await ensureAuthTables();
 
-            const accountResult = await pool.query(
-                `SELECT ua.account_id, ua.employee_id, ua.password_hash, ua.role as account_role,
-                        e.full_name, e.mail
-                 FROM user_accounts ua
-                 JOIN employees e ON ua.employee_id = e.employee_id
-                 WHERE ua.email = $1`,
-                [email]
-            );
-
-            if (accountResult.rows.length === 0) {
+            const account = await provisionAccountIfMissing(email);
+            if (!account) {
                 return res.status(401).json({ error: 'Пользователь не найден' });
             }
-
-            const account = accountResult.rows[0];
 
             const isValidPassword = await bcrypt.compare(password, account.password_hash);
 
