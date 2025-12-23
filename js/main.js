@@ -716,7 +716,7 @@ async function editIngredient(ingredientId) {
                 </div>
                 <div class="form-group">
                     <label for="editExpirationDate">Срок годности:</label>
-                    <input type="date" id="editExpirationDate" value="${ingredient.expiration_date}" required>
+                    <input type="date" id="editExpirationDate" value="${(ingredient.expiration_date || '').slice(0, 10)}" required>
                 </div>
             </form>
         `;

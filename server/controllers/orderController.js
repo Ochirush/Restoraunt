@@ -8,7 +8,13 @@ const orderController = {
                 SELECT o.*, 
                        e.full_name as employee_name,
                        es.name as establishment_name,
-                       b.total_price,
+                       COALESCE(
+                           b.total_price,
+                           (SELECT SUM(d.price * p.quantity)
+                            FROM positions p
+                            JOIN dishes d ON p.dish_id = d.dish_id
+                            WHERE p.order_id = o.order_id)
+                       ) as total_price,
                        b.rating
                 FROM orders o
                 JOIN employees e ON o.employee_id = e.employee_id
@@ -39,9 +45,10 @@ const orderController = {
             }
             
             query += ' ORDER BY o.datetime DESC';
-            
-            const orders = await pool.query(query, params);
-            res.json(orders.rows);
+            const result = await pool.query(query, params);
+
+            // просто отдать строки как есть – фронт уже под них написан
+            res.json(result.rows);
         } catch (error) {
             console.error('Ошибка получения заказов:', error);
             res.status(500).json({ error: 'Ошибка получения заказов' });
@@ -56,7 +63,13 @@ const orderController = {
                 `SELECT o.*, 
                         e.full_name as employee_name,
                         es.name as establishment_name,
-                        b.total_price,
+                        COALESCE(
+                            b.total_price,
+                            (SELECT SUM(d.price * p.quantity)
+                             FROM positions p
+                             JOIN dishes d ON p.dish_id = d.dish_id
+                             WHERE p.order_id = o.order_id)
+                        ) as total_price,
                         b.payment_method,
                         b.tips,
                         b.rating

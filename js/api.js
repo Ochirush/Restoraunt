@@ -9,6 +9,13 @@ class ApiService {
         this.token = token;
         localStorage.setItem('token', token);
     }
+    async getIngredientById(id) {
+    const response = await fetch(`${API_URL}/inventory/${id}`, {
+        method: 'GET',
+        headers: this.getHeaders()
+    });
+    return this.handleResponse(response);
+    }
 
     clearToken() {
         this.token = null;
